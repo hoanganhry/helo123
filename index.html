@@ -990,14 +990,14 @@ async function api(path, opts = {}) {
   const res = await fetch(new URL(path, `${API_BASE_URL}/`), { ...opts, headers });
   let data;
   try { data = await res.json(); } catch { data = { success: false, message: 'Phản hồi không hợp lệ' }; }
-  if (res.status === 401 && dashboardAuthorization) {
+  if (res.status === 401) {
     dashboardAuthorization = '';
     $('dashboardLoginTrigger').textContent = 'Đăng nhập';
     $('statusText').textContent = 'Phiên đăng nhập đã hết hạn';
     $('statusDot').className = 'status-dot bad';
-    $('dashboardLoginError').textContent = 'Phiên đăng nhập hết hạn hoặc thông tin không đúng. Hãy đăng nhập lại.';
+    $('dashboardLoginError').textContent = 'Cần đăng nhập quản trị để dùng chức năng này.';
     $('dashboardLogin').hidden = false;
-    $('dashboardUsername').focus();
+    if (dashboardRefreshTimersStarted) $('dashboardUsername').focus();
   }
   return { ok: res.ok, status: res.status, data };
 }
@@ -1905,7 +1905,9 @@ $('dashboardLoginForm').addEventListener('submit', async event => {
   } catch (loginError) {
     dashboardAuthorization = '';
     $('dashboardPassword').value = '';
-    error.textContent = loginError.message || 'Không kết nối được API. Hãy thử lại.';
+    error.textContent = loginError instanceof TypeError
+      ? 'Không kết nối được API Render. Hãy thử lại sau khi dịch vụ hoạt động và CORS đã được triển khai.'
+      : loginError.message || 'Không đăng nhập được. Hãy kiểm tra thông tin và thử lại.';
   } finally {
     button.disabled = false;
   }
