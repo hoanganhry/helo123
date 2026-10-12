@@ -405,7 +405,7 @@
 </style>
 </head>
 <body>
-<div class="dashboard-login" id="dashboardLogin">
+<div class="dashboard-login" id="dashboardLogin" hidden>
   <form class="dashboard-login-card" id="dashboardLoginForm">
     <h1>Đăng nhập quản trị</h1>
     <p>Dùng tên đăng nhập và mật khẩu dashboard đã cấu hình trong Render. Thông tin chỉ được giữ trong bộ nhớ của trang hiện tại.</p>
@@ -421,9 +421,12 @@
 
   <header>
     <span class="topbar-label">Dashboard</span>
-    <div class="status-chip" id="statusChip">
-      <span class="status-dot pulse" id="statusDot"></span>
-      <span id="statusText">checking server…</span>
+    <div class="toolbar-actions">
+      <div class="status-chip" id="statusChip">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Chưa đăng nhập</span>
+      </div>
+      <button class="btn secondary" id="dashboardLoginTrigger" type="button">Đăng nhập</button>
     </div>
   </header>
 
@@ -473,15 +476,15 @@
         <h2>Thông tin hệ thống</h2>
         <p class="sub">Trạng thái API và thông tin dịch vụ hiện tại</p>
         <div class="feature-value" id="serviceName">AuthAPI</div>
-        <div id="apiFeatureList" class="hint">Đang tải thông tin hệ thống…</div>
+        <div id="apiFeatureList" class="hint">Đăng nhập để xem thông tin hệ thống.</div>
         <div class="divider"></div>
         <div class="hint">Thời gian hoạt động: <strong id="dashboardUptime">—</strong></div>
       </div>
       <div class="panel dashboard-feature">
         <h2>Trạng thái kết nối</h2>
         <p class="sub">Kết nối trực tiếp đến API trên Render</p>
-        <div class="feature-value" id="dashboardConnection">Đang kiểm tra…</div>
-        <div class="hint">Dữ liệu được nạp tự động và cập nhật định kỳ.</div>
+        <div class="feature-value" id="dashboardConnection">Chưa đăng nhập</div>
+        <div class="hint">Đăng nhập để tải dữ liệu và quản lý dashboard.</div>
         <div class="row" style="margin-top:20px;">
           <button class="btn secondary" onclick="loadOverview()">Làm mới tổng quan</button>
         </div>
@@ -989,6 +992,9 @@ async function api(path, opts = {}) {
   try { data = await res.json(); } catch { data = { success: false, message: 'Phản hồi không hợp lệ' }; }
   if (res.status === 401 && dashboardAuthorization) {
     dashboardAuthorization = '';
+    $('dashboardLoginTrigger').textContent = 'Đăng nhập';
+    $('statusText').textContent = 'Phiên đăng nhập đã hết hạn';
+    $('statusDot').className = 'status-dot bad';
     $('dashboardLoginError').textContent = 'Phiên đăng nhập hết hạn hoặc thông tin không đúng. Hãy đăng nhập lại.';
     $('dashboardLogin').hidden = false;
     $('dashboardUsername').focus();
@@ -1884,6 +1890,9 @@ $('dashboardLoginForm').addEventListener('submit', async event => {
     if (!result.ok) throw new Error(result.data.message || 'Không đăng nhập được.');
     $('dashboardPassword').value = '';
     $('dashboardLogin').hidden = true;
+    $('statusText').textContent = 'Đã đăng nhập';
+    $('statusDot').className = 'status-dot ok';
+    $('dashboardLoginTrigger').textContent = 'Đăng xuất';
     loadOverview();
     if (new URLSearchParams(window.location.search).get('tab') === 'devices') switchTab('devices');
     if (!dashboardRefreshTimersStarted) {
@@ -1895,12 +1904,27 @@ $('dashboardLoginForm').addEventListener('submit', async event => {
     }
   } catch (loginError) {
     dashboardAuthorization = '';
+    $('dashboardPassword').value = '';
     error.textContent = loginError.message || 'Không kết nối được API. Hãy thử lại.';
   } finally {
     button.disabled = false;
   }
 });
-$('dashboardUsername').focus();
+$('dashboardLoginTrigger').addEventListener('click', () => {
+  if (dashboardAuthorization) {
+    dashboardAuthorization = '';
+    $('dashboardLoginTrigger').textContent = 'Đăng nhập';
+    $('statusText').textContent = 'Đã đăng xuất';
+    $('statusDot').className = 'status-dot';
+    $('dashboardConnection').textContent = 'Chưa đăng nhập';
+    $('apiFeatureList').textContent = 'Đăng nhập để xem thông tin hệ thống.';
+    $('dashboardLoginError').textContent = '';
+    return;
+  }
+  $('dashboardLogin').hidden = false;
+  $('dashboardLoginError').textContent = '';
+  $('dashboardUsername').focus();
+});
 </script>
 </body>
 </html>
